@@ -100,11 +100,41 @@ end
 % --- Executes on button press in btnBrowse.
 function btnBrowse_Callback(hObject, eventdata, handles)
 global image
+global heightdata
+global refdata
 
+%get filename and Path via pop-up menu
 [filename,pathname] = uigetfile();
-image = imread([pathname filename]);
-display()
+['File Choosen: ' pathname filename]
+%get files contained in the path
+files = strsplit(ls(pathname));
 
+%get indexes of other files
+dattmp = strfind(files,'.dat');
+tfwtmp = strfind(files,'.tfw');
+datindex = 0;
+tfwindex = 0;
+for i = 1:1:length(files)
+    if isempty(dattmp{i}) == 0
+        datindex = i;
+    end
+    if isempty(tfwtmp{i}) == 0
+        tfwindex = i;
+    end
+end
+
+%Check if the files have been found
+if datindex == 0 || tfwindex == 0
+    errordlg('File not Found')
+else
+    'Found Heightdata and WorldFile'
+    'Reading Image'
+    image = imread([pathname filename]);
+    'Reading Heightdata'
+    readHeightData([pathname files{datindex}]);
+    heightdata(:,1:10)
+    display()
+end
 
 % --- Executes on button press in btnColor.
 function btnColor_Callback(hObject, eventdata, handles)
@@ -112,13 +142,11 @@ global toggle
 toggle = get(hObject, 'Value');
 display()
 
-
 % --- Executes on slider movement.
 function sldBrightness_Callback(hObject, eventdata, handles)
 global brightness
 brightness = get(hObject, 'Value');
 display()
-
 
 % --- Executes during object creation, after setting all properties.
 function sldBrightness_CreateFcn(hObject, eventdata, handles)
@@ -130,6 +158,31 @@ function sldBrightness_CreateFcn(hObject, eventdata, handles)
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
+
+function readHeightData(url)
+global heightdata
+fid = fopen(url);
+
+%get linecount
+linecount = 0;
+while ~feof(fid)
+    line = fgetl(fid);
+    linecount = linecount+1;
+end
+
+fclose(fid);
+fopen(url);
+%init heightdata
+heightdata = NaN(3,linecount);
+
+for i = 1:1:linecount
+    line = strsplit(fgetl(fid));
+    heightdata(1,i) = str2num(line(2));
+    heightdata(2,i) = str2num(line(3));
+    heightdata(3,1) = str2num(line(4));
+end
+fclose(fid);
+
 
 function display()
 global image 
@@ -146,10 +199,21 @@ end
 
 imshow(tmpimg)
 
+
 function init()
 global image
 global brightness
 global toggle
+global heightdata
 
-brightness = 1
-toggle = 1.0
+brightness = 1.0;
+toggle = 1.0;
+
+%Things to talk about:
+%1 Everything is a hack; Do we even give a shit at this point?
+%2 File chooser might be wrong
+%3 Save BW image or create every time
+%4 World file usage
+%5 Remove Gui text Field?
+%6 autoset filetype in filegui
+%7 labelkram?
