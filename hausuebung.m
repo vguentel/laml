@@ -105,7 +105,7 @@ global refdata
 
 %get filename and Path via pop-up menu
 [filename,pathname] = uigetfile();
-['File Choosen: ' pathname filename]
+disp(['File Choosen: ' pathname filename])
 %get files contained in the path
 files = strsplit(ls(pathname));
 
@@ -127,12 +127,12 @@ end
 if datindex == 0 || tfwindex == 0
     errordlg('File not Found')
 else
-    'Found Heightdata and WorldFile'
-    'Reading Image'
+    disp('Found Heightdata and WorldFile')
+    disp('Reading Image')
     image = imread([pathname filename]);
-    'Reading Heightdata'
-    readHeightData([pathname files{datindex}]);
-    heightdata(:,1:10)
+    disp('Reading Heightdata')
+    %readHeightData([pathname files{datindex}]);
+    heightdata = load([pathname files{datindex}]);
     display()
 end
 
@@ -177,17 +177,19 @@ heightdata = NaN(3,linecount);
 
 for i = 1:1:linecount
     line = strsplit(fgetl(fid));
-    heightdata(1,i) = str2num(line(2));
-    heightdata(2,i) = str2num(line(3));
-    heightdata(3,1) = str2num(line(4));
+    heightdata(1,i) = str2double(line{2});
+    heightdata(2,i) = str2double(line{3});
+    heightdata(3,i) = str2double(line{4});
 end
 fclose(fid);
 
 
 function display()
+disp('displaying')
 global image 
 global brightness
 global toggle
+global heightdata
 tmpimg = 0;
 
 if toggle == 0.0
@@ -197,7 +199,10 @@ else
     tmpimg = tmpimg./brightness;
 end
 
-imshow(tmpimg)
+%surf(heightdata(1,:),heightdata(2,:),heightdata(3,:))
+%surf(5*ones(size(tmpimg)), tmpimg,'EdgeColor','none')
+surf(heightdata,tmpimg)
+%imshow(tmpimg)
 
 
 function init()
