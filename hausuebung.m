@@ -91,7 +91,7 @@ global datadim
 [filename,pathname] = uigetfile('*.*');
 disp(['File Choosen: ' pathname filename])
 %get files contained in the path
-filetmp = dir(pathname)
+filetmp = dir(pathname);
 files = {filetmp.name};
 
 %get indexes of other files
@@ -150,6 +150,7 @@ end
 function axesImage_CreateFcn(hObject, eventdata, handles)
 %Enable 3D rotation
 set(rotate3d, 'Enable', 'on');
+set(hObject,'zlim',[0 100]);
 
 % --- Executes on button press in btnSave.
 function btnSave_Callback(hObject, eventdata, handles)
@@ -167,7 +168,7 @@ datadim = datadim(1);
 heightdata = zeros(datadim);
 for i = 1:datadim
     for j = 1:datadim
-        heightdata(i,j) = data(((i-1) * datadim) + j,3);
+        heightdata(j,i) = data(((i-1) * datadim) + j,3)/10;
     end
 end
 
@@ -178,16 +179,19 @@ global brightness
 global toggle
 global heightdata
 global original
+global datadim
 
 if toggle == 0.0
     image = original./brightness;
     surf(heightdata, image, 'EdgeColor', 'none')
+    axis([0 datadim 0 datadim 0 datadim])
     colormap(hsv);
     disp('hsv')
 else
     image = rgb2gray(original);
     image = image./brightness;
     surf(heightdata, image, 'EdgeColor', 'none')
+    axis([0 datadim 0 datadim 0 datadim]);
     colormap(gray);
     disp('gray')
 end
