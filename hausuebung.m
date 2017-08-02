@@ -91,7 +91,8 @@ global datadim
 [filename,pathname] = uigetfile('*.*');
 disp(['File Choosen: ' pathname filename])
 %get files contained in the path
-files = strsplit(ls(pathname));
+filetmp = dir(pathname)
+files = {filetmp.name};
 
 %get indexes of other files
 dattmp = strfind(files,'.dat');
