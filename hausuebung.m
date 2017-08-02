@@ -22,7 +22,7 @@ function varargout = hausuebung(varargin)
 
 % Edit the above text to modify the response to help hausuebung
 
-% Last Modified by GUIDE v2.5 05-Jul-2017 11:27:52
+% Last Modified by GUIDE v2.5 31-Jul-2017 18:49:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -41,8 +41,6 @@ if nargout
 else
     gui_mainfcn(gui_State, varargin{:});
 end
-% End initialization code - DO NOT EDIT
-
 
 % --- Executes just before hausuebung is made visible.
 function hausuebung_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -59,10 +57,6 @@ handles.output = hObject;
 % Update handles structure
 guidata(hObject, handles);
 
-% UIWAIT makes hausuebung wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
-
-
 % --- Outputs from this function are returned to the command line.
 function varargout = hausuebung_OutputFcn(hObject, eventdata, handles) 
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -73,16 +67,7 @@ function varargout = hausuebung_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-
-
 function txtImgUrl_Callback(hObject, eventdata, handles)
-% hObject    handle to txtImgUrl (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of txtImgUrl as text
-%        str2double(get(hObject,'String')) returns contents of txtImgUrl as a double
-
 
 % --- Executes during object creation, after setting all properties.
 function txtImgUrl_CreateFcn(hObject, eventdata, handles)
@@ -99,12 +84,11 @@ end
 
 % --- Executes on button press in btnBrowse.
 function btnBrowse_Callback(hObject, eventdata, handles)
-global image
-global heightdata
-global refdata
+global original
+global datadim
 
 %get filename and Path via pop-up menu
-[filename,pathname] = uigetfile();
+[filename,pathname] = uigetfile('*.*');
 disp(['File Choosen: ' pathname filename])
 %get files contained in the path
 files = strsplit(ls(pathname));
@@ -114,6 +98,8 @@ dattmp = strfind(files,'.dat');
 tfwtmp = strfind(files,'.tfw');
 datindex = 0;
 tfwindex = 0;
+
+%find files
 for i = 1:1:length(files)
     if isempty(dattmp{i}) == 0
         datindex = i;
@@ -129,10 +115,15 @@ if datindex == 0 || tfwindex == 0
 else
     disp('Found Heightdata and WorldFile')
     disp('Reading Image')
-    image = imread([pathname filename]);
     disp('Reading Heightdata')
-    %readHeightData([pathname files{datindex}]);
-    heightdata = load([pathname files{datindex}]);
+    
+    loadHeightData(load([pathname files{datindex}]));
+    
+    imageFull = imread([pathname filename]);
+    sampleDim = floor(size(imageFull)/datadim);
+    
+    original = imageFull(1:sampleDim:end, 1:sampleDim:end, :);%subsample 
+    original = original(1:datadim,1:datadim,:);%cut to size
     display()
 end
 
@@ -150,39 +141,34 @@ display()
 
 % --- Executes during object creation, after setting all properties.
 function sldBrightness_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to sldBrightness (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: slider controls usually have a light gray background.
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
 
-function readHeightData(url)
+% --- Executes during object creation, after setting all properties.
+function axesImage_CreateFcn(hObject, eventdata, handles)
+%Enable 3D rotation
+set(rotate3d, 'Enable', 'on');
+
+% --- Executes on button press in btnSave.
+function btnSave_Callback(hObject, eventdata, handles)
+disp('saving image')
+frame = getframe;
+[filename,pathname] = uiputfile();
+imwrite(frame.cdata,[pathname filename]);
+disp(['image saved to' pathname filename])
+
+function loadHeightData(data)
 global heightdata
-fid = fopen(url);
-
-%get linecount
-linecount = 0;
-while ~feof(fid)
-    line = fgetl(fid);
-    linecount = linecount+1;
+global datadim
+datadim = sqrt(size(data));
+datadim = datadim(1);
+heightdata = zeros(datadim);
+for i = 1:datadim
+    for j = 1:datadim
+        heightdata(i,j) = data(((i-1) * datadim) + j,3);
+    end
 end
-
-fclose(fid);
-fopen(url);
-%init heightdata
-heightdata = NaN(3,linecount);
-
-for i = 1:1:linecount
-    line = strsplit(fgetl(fid));
-    heightdata(1,i) = str2double(line{2});
-    heightdata(2,i) = str2double(line{3});
-    heightdata(3,i) = str2double(line{4});
-end
-fclose(fid);
-
 
 function display()
 disp('displaying')
@@ -190,35 +176,30 @@ global image
 global brightness
 global toggle
 global heightdata
-tmpimg = 0;
+global original
 
 if toggle == 0.0
-    tmpimg = image./brightness;
+    image = original./brightness;
+    surf(heightdata, image, 'EdgeColor', 'none')
+    colormap(hsv);
+    disp('hsv')
 else
-    tmpimg = rgb2gray(image);
-    tmpimg = tmpimg./brightness;
+    image = rgb2gray(original);
+    image = image./brightness;
+    surf(heightdata, image, 'EdgeColor', 'none')
+    colormap(gray);
+    disp('gray')
 end
-
-%surf(heightdata(1,:),heightdata(2,:),heightdata(3,:))
-%surf(5*ones(size(tmpimg)), tmpimg,'EdgeColor','none')
-surf(heightdata,tmpimg)
-%imshow(tmpimg)
-
 
 function init()
 global image
 global brightness
 global toggle
 global heightdata
+global original
+global datadim
 
 brightness = 1.0;
-toggle = 1.0;
+toggle = 0.0;
 
-%Things to talk about:
-%1 Everything is a hack; Do we even give a shit at this point?
-%2 File chooser might be wrong
-%3 Save BW image or create every time
-%4 World file usage
-%5 Remove Gui text Field?
-%6 autoset filetype in filegui
-%7 labelkram?
+
