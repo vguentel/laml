@@ -22,7 +22,7 @@ function varargout = hausuebung(varargin)
 
 % Edit the above text to modify the response to help hausuebung
 
-% Last Modified by GUIDE v2.5 31-Jul-2017 18:49:17
+% Last Modified by GUIDE v2.5 05-Aug-2017 17:24:52
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -87,44 +87,43 @@ function btnBrowse_Callback(hObject, eventdata, handles)
 global original
 global datadim
 
-%get filename and Path via pop-up menu
-[filename,pathname] = uigetfile('*.*');
-disp(['File Choosen: ' pathname filename])
-%get files contained in the path
-filetmp = dir(pathname);
-files = {filetmp.name};
+imageFile = 0;
+imagePath = 0;
+datFile  = 0;
+datPath = 0;
+tfwFile = 0;
+tfwPath = 0;
 
-%get indexes of other files
-dattmp = strfind(files,'.dat');
-tfwtmp = strfind(files,'.tfw');
-datindex = 0;
-tfwindex = 0;
+%get Image via Pop-Up
+[imageFile, imagePath] = uigetfile('*.tif', 'Choose Image');
+disp(['Image file Choosen: ' imagePath imageFile])
 
-%find files
-for i = 1:1:length(files)
-    if isempty(dattmp{i}) == 0
-        datindex = i;
-    end
-    if isempty(tfwtmp{i}) == 0
-        tfwindex = i;
-    end
-end
+%get Heightdata via Pop-Up
+[datFile, datPath] = uigetfile('*.dat', 'Choose Heightdata');
+disp(['Heightdata file Choosen: ' datPath datFile])
+
+%get Worldfile via Pop-Up
+[tfwFile, tfwPath] = uigetfile('*.tfw', 'Choose Worldfile');
+disp(['Worldfile Choosen: ' tfwPath tfwFile])
 
 %Check if the files have been found
-if datindex == 0 || tfwindex == 0
+if ~logical(datFile(1)) || ~logical(tfwFile(1)) || ~logical(imageFile(1))
     errordlg('File not Found')
 else
-    disp('Found Heightdata and WorldFile')
-    disp('Reading Image')
+    disp('All Files Found')
+    
     disp('Reading Heightdata')
+    loadHeightData(load([datPath datFile]));
     
-    loadHeightData(load([pathname files{datindex}]));
-    
-    imageFull = imread([pathname filename]);
+    disp('Reading Image')
+    imageFull = imread([imagePath imageFile]);
     sampleDim = floor(size(imageFull)/datadim);
+    sampleDim = sampleDim(1);
     
     original = imageFull(1:sampleDim:end, 1:sampleDim:end, :);%subsample 
     original = original(1:datadim,1:datadim,:);%cut to size
+    
+    
     display()
 end
 
@@ -132,12 +131,18 @@ end
 function btnColor_Callback(hObject, eventdata, handles)
 global toggle
 toggle = get(hObject, 'Value');
+if toggle == 0.0
+    disp('Colormode: HSV')
+else
+    disp('Colormode: B/W')
+end
 display()
 
 % --- Executes on slider movement.
 function sldBrightness_Callback(hObject, eventdata, handles)
 global brightness
 brightness = get(hObject, 'Value');
+disp(['Brightness: ' num2str(brightness)])
 display()
 
 % --- Executes during object creation, after setting all properties.
@@ -150,7 +155,6 @@ end
 function axesImage_CreateFcn(hObject, eventdata, handles)
 %Enable 3D rotation
 set(rotate3d, 'Enable', 'on');
-set(hObject,'zlim',[0 100]);
 
 % --- Executes on button press in btnSave.
 function btnSave_Callback(hObject, eventdata, handles)
@@ -158,22 +162,34 @@ disp('saving image')
 frame = getframe;
 [filename,pathname] = uiputfile();
 imwrite(frame.cdata,[pathname filename]);
-disp(['image saved to' pathname filename])
+disp(['Image saved to: ' pathname filename])
 
+%take heightdata and Format them into approriat matrix inscrease resolution
+%by upscalefactor
 function loadHeightData(data)
 global heightdata
 global datadim
+
+upscalefactor = 2;
+
+%Build Matrix
 datadim = sqrt(size(data));
 datadim = datadim(1);
 heightdata = zeros(datadim);
 for i = 1:datadim
     for j = 1:datadim
-        heightdata(j,i) = data(((i-1) * datadim) + j,3)/10;
+        heightdata(i,j) = data(((i-1) * datadim) +j,3)/10;
     end
 end
 
+%Upscale MAtrix by interpolating
+heightdata = interp2(heightdata, upscalefactor);
+datadim = size(heightdata);
+datadim = datadim(1);
+
+
+%Displays data in Axis incl. Colormode and Brightness
 function display()
-disp('displaying')
 global image 
 global brightness
 global toggle
@@ -181,21 +197,20 @@ global heightdata
 global original
 global datadim
 
-if toggle == 0.0
+if toggle == 0.0 %HSV
     image = original./brightness;
     surf(heightdata, image, 'EdgeColor', 'none')
-    axis([0 datadim 0 datadim 0 datadim])
-    colormap(hsv);
-    disp('hsv')
-else
+    axis([0 datadim 0 datadim 0 datadim/4]); %Limit axis; Z-axis/4 for better viewing 
+    colormap default;
+else %BW
     image = rgb2gray(original);
     image = image./brightness;
     surf(heightdata, image, 'EdgeColor', 'none')
-    axis([0 datadim 0 datadim 0 datadim]);
-    colormap(gray);
-    disp('gray')
+    axis([0 datadim 0 datadim 0 datadim/4]); %Limit axis; Z-axis/4 for better viewing 
+    colormap gray;
 end
 
+%Init Function 
 function init()
 global image
 global brightness
@@ -206,5 +221,3 @@ global datadim
 
 brightness = 1.0;
 toggle = 0.0;
-
-
