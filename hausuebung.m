@@ -87,6 +87,7 @@ function btnBrowse_Callback(hObject, eventdata, handles)
 global original
 global datadim
 
+%init variables for logical check later
 imageFile = 0;
 imagePath = 0;
 datFile  = 0;
@@ -117,7 +118,7 @@ else
     
     disp('Reading Image')
     imageFull = imread([imagePath imageFile]);
-    sampleDim = floor(size(imageFull)/datadim);
+    sampleDim = floor(size(imageFull)/datadim);%calculate stepsize for subsample
     sampleDim = sampleDim(1);
     
     original = imageFull(1:sampleDim:end, 1:sampleDim:end, :);%subsample 
@@ -128,6 +129,8 @@ else
 end
 
 % --- Executes on button press in btnColor.
+% changes Value of global var toggle, which in turn changes the displayes
+% colormap
 function btnColor_Callback(hObject, eventdata, handles)
 global toggle
 toggle = get(hObject, 'Value');
@@ -139,6 +142,8 @@ end
 display()
 
 % --- Executes on slider movement.
+% changes value of global var brightness, which in turn changes the brightness
+% of the plot
 function sldBrightness_Callback(hObject, eventdata, handles)
 global brightness
 brightness = get(hObject, 'Value');
@@ -153,18 +158,17 @@ end
 
 % --- Executes during object creation, after setting all properties.
 function axesImage_CreateFcn(hObject, eventdata, handles)
-%Enable 3D rotation
-set(rotate3d, 'Enable', 'on');
+set(rotate3d, 'Enable', 'on');%Enable 3D rotation
 
 % --- Executes on button press in btnSave.
 function btnSave_Callback(hObject, eventdata, handles)
 disp('saving image')
-frame = getframe;
-[filename,pathname] = uiputfile();
+frame = getframe;%Get current view of Plot
+[filename,pathname] = uiputfile(); %get URL to save the File to
 imwrite(frame.cdata,[pathname filename]);
 disp(['Image saved to: ' pathname filename])
 
-%take heightdata and Format them into approriat matrix inscrease resolution
+%take heightdata and Format them into matrix; increase resolution
 %by upscalefactor
 function loadHeightData(data)
 global heightdata
@@ -190,7 +194,6 @@ datadim = datadim(1);
 
 %Displays data in Axis incl. Colormode and Brightness
 function display()
-global image 
 global brightness
 global toggle
 global heightdata
@@ -198,13 +201,13 @@ global original
 global datadim
 
 if toggle == 0.0 %HSV
-    image = original./brightness;
+    image = original./brightness;%modify Brightness
     surf(heightdata, image, 'EdgeColor', 'none')
     axis([0 datadim 0 datadim 0 datadim/4]); %Limit axis; Z-axis/4 for better viewing 
     colormap default;
 else %BW
-    image = rgb2gray(original);
-    image = image./brightness;
+    image = rgb2gray(original);%Change image to BW
+    image = image./brightness;%Modify Brightness
     surf(heightdata, image, 'EdgeColor', 'none')
     axis([0 datadim 0 datadim 0 datadim/4]); %Limit axis; Z-axis/4 for better viewing 
     colormap gray;
@@ -212,7 +215,6 @@ end
 
 %Init Function 
 function init()
-global image
 global brightness
 global toggle
 global heightdata
